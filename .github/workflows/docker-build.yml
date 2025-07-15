@@ -29,7 +29,7 @@ jobs:
 
     # ✅ Login to GHCR
     - name: Docker login to GHCR
-      run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
     # ✅ Build and push image
     - name: Build & Push Docker Image
@@ -50,8 +50,8 @@ jobs:
         kubectl delete secret ghcr-secret -n $NAMESPACE --ignore-not-found
         kubectl create secret docker-registry ghcr-secret \
           --docker-server=ghcr.io \
-          --docker-username=${{ github.actor }} \
-          --docker-password=${{ secrets.GHCR_PAT }} \
+          --docker-username=${{ secrets.GHCR_USERNAME }} \
+          --docker-password=${{ secrets.GHCR_TOKEN }} \
           --namespace $NAMESPACE
 
     # ✅ Deploy to Minikube
