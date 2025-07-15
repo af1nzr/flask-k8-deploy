@@ -31,7 +31,7 @@ jobs:
     - name: Docker login to GHCR
       run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
-    # ✅ Build and push image
+    # ✅ Build and push image to GHCR
     - name: Build & Push Docker Image
       run: |
         IMAGE_TAG=${IMAGE_NAME}:${GITHUB_SHA::7}
@@ -54,18 +54,21 @@ jobs:
           --docker-password=${{ secrets.GHCR_TOKEN }} \
           --namespace $NAMESPACE
 
-    # ✅ Deploy to Minikube
+    # ✅ Deploy manifests
     - name: Apply Kubernetes Manifests
       run: |
         kubectl apply -n $NAMESPACE -f k8/deployment.yml
         kubectl apply -n $NAMESPACE -f k8/service.yml
         kubectl apply -n $NAMESPACE -f k8/ingress.yml
 
-    # ✅ Install ingress controller (NGINX)
+    # ✅ Install ingress controller (NGINX) & wait correctly
     - name: Install Ingress Controller
       run: |
         minikube addons enable ingress
-        kubectl wait --namespace kube-system \
+        echo "✅ Waiting for ingress controller to be ready..."
+        kubectl get ns
+        kubectl get all -A | grep ingress || true
+        kubectl wait --namespace ingress-nginx \
           --for=condition=available deployment/ingress-nginx-controller --timeout=180s
 
     # ✅ Update /etc/hosts inside runner
@@ -73,6 +76,6 @@ jobs:
       run: |
         echo "$(minikube ip) $HOST_NAME" | sudo tee -a /etc/hosts
 
-    # ✅ Test the deployed app
+    # ✅ Test the deployed app via ingress
     - name: Test App via Ingress
       run: curl -v http://$HOST_NAME
